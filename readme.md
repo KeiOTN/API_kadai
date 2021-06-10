@@ -1,7 +1,7 @@
 # 画像解析及び解析結果翻訳
 ## 使用したAPI
 - Google Vision API(画像解析)
-- Google 翻訳API
+- Cloud Translation API（翻訳）
 
 ## プロダクトの紹介
 - 任意の画像をアップロードしてください
