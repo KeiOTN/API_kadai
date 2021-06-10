@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8">
+    <title>Image Analysis</title>
+    <link href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- 画像分析参考サイト -->
+    <!-- https://qiita.com/KMim/items/884b237f962066fb78eb -->
+    <!-- Google cloud Vision API画像分析は1,000枚まで無料/月 -->
+    <!-- 翻訳参考サイト -->
+    <!-- Cloud Translation API翻訳は500,000字まで無料/月 -->
+    <!-- https://note.com/npaka/n/n1766dbe194b4 -->
+
+    <h3 id='title'>写真になにが写っているかな？</h3>
+    <!--- 画像をアップロードさせるためのボタンのあるエリア --->
+    <div id="uploadArea">
+        <l>調べたい写真を選んでね→ </l><input type="file" id="uploader">
+    </div>
+    <div class="resultArea resultWrapper hidden">
+        <div class=right-and-left>
+            <!-- 左右半分ずつに配置 -->
+            <div class="photo-and-chart">
+                <!-- 写真表示と感情チャート,（＋テキスト解析）BOX -->
+                <div class="photo-area" id="showPic">
+                    <!-- アップロードした写真が表示される場所 -->
+                </div>
+                <div class="emoion-area" id="chartArea">
+                    <!-- 感情分析結果/人物の表情に関する結果をレーダーチャートで表示  -->
+                </div> <!-- emoion END -->
+                <div class="text-result">
+                    <table id="textTable">
+                        <!-- テキスト分析結果 -->
+                        <thead>
+                            <tr>
+                                <td><b>この写真にはどんな文字が書かれているかな...？</b></td>
+                            </tr>
+                        </thead>
+                        <tbody id="textBox"></tbody>
+                    </table>
+                </div> <!-- text-result END -->
+            </div> <!-- photo-and-chart END -->
+
+            <div class="label-result">
+                <!-- ラベル分析結果 -->
+                <table id="resultTable-English">
+                    <thead class="English-words">
+                        <tr>
+                            <td><b>この写真はに写っているのは...</b></td>
+                        </tr>
+                    </thead>
+                    <tbody id="resultBox-English"></tbody>
+                </table>
+                <table id="resultTable-Japanese">
+                    <thead class="Japanese-words">
+                        <tr>
+                            <td><b>日本語にすると...</b></td>
+                        </tr>
+                    </thead>
+                    <tbody id="resultBox-Japanese"></tbody>
+                </table>
+                <table id="resultTable-Japanese-lid">
+                    <thead class="Japanese-words-lid">
+                        <tr>
+                            <td></td>
+                        </tr>
+                    </thead>
+                    <tbody id="resultBox-Japanese-lid"></tbody>
+                </table>
+            </div> <!-- label-result END -->
+        </div> <!-- right-and-left END -->
+
+
+
+    </div> <!-- resultArea resultWrapper END -->
+
+
+
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <!--- 表情分析の結果をレーダーチャートで表すために以下の二つを用いる --->
+    <script src="http://code.highcharts.com/highcharts.js"></script>
+    <script src="http://code.highcharts.com/highcharts-more.js"></script>
+    <!-- <script type="text/javascript" src="CloudVision.js"></script> -->
+
+    <script> // 翻訳機能
+        // 英→和
+        function translateEngToJap(x) {
+            let apiKey = '翻訳APIkey'
+            let text = x
+            let fromLang = 'en'
+            let toLang = 'ja'
+            const URL = "https://translation.googleapis.com/language/translate/v2?key=" + apiKey +
+                "&q=" + encodeURI(text) + "&source=" + fromLang + "&target=" + toLang
+            let xhr = new XMLHttpRequest()
+            xhr.open('POST', [URL], false)
+            xhr.send();
+            if (xhr.status === 200) {
+                const res = JSON.parse(xhr.responseText);
+                // alert(res["data"]["translations"][0]["translatedText"]);
+                return res["data"]["translations"][0]["translatedText"];
+            }
+        }
+
+        // 和→英
+        function translateJapToEng(y) {
+            let apiKey = '翻訳APIkey'
+            let text = y
+            let fromLang = 'ja'
+            let toLang = 'en'
+            const URL = "https://translation.googleapis.com/language/translate/v2?key=" + apiKey +
+                "&q=" + encodeURI(text) + "&source=" + fromLang + "&target=" + toLang
+            let xhr = new XMLHttpRequest()
+            xhr.open('POST', [URL], false)
+            xhr.send();
+            if (xhr.status === 200) {
+                const res = JSON.parse(xhr.responseText);
+                // alert(res["data"]["translations"][0]["translatedText"]);
+                return res["data"]["translations"][0]["translatedText"];
+            }
+        }
+    </script>
+
+    <script>// 画像解析
+        //section 1
+        //APIを利用する際のURL
+        var KEY = '画像解析APIkey'
+        var url = 'https://vision.googleapis.com/v1/images:annotate?key='
+        var api_url = url + KEY
+
+        //section 2
+        //ページを読み込む際に動的にラベル検出結果表示用のテーブルを作成
+        $(function () {
+            for (var i = 0; i < 20; i++) {
+                $("#resultBox-English").append("<tr><td class='resultTableContent-English'></td></tr>");
+                $("#resultBox-Japanese").append("<tr><td class='resultTableContent-Japanese " + "JP" + i + "'></td></tr>");
+            }
+        })
+
+        //section 3
+        //画面の表示内容をクリアする処理
+        function clear() {
+            if ($("#textBox tr").length) {
+                $("#textBox tr").remove();
+            }
+            if ($("#chartArea div").length) {
+                $("#chartArea div").remove();
+            }
+            $("#resultBox-English tr td").text("");
+            $("#resultBox-Japanese tr td").text("")
+        }
+
+        //section 4
+        //画像がアップロードされた時点で呼び出される処理
+        $("#uploader").change(function (evt) {
+            getImageInfo(evt);
+            clear();
+            $(".resultArea").removeClass("hidden")
+        })
+
+        //section 5
+        //画像ファイルを読み込み、APIを利用するためのURLを組み立てる
+        function getImageInfo(evt) {
+            var file = evt.target.files;
+            var reader = new FileReader();
+            var dataUrl = "";
+            reader.readAsDataURL(file[0]);
+            reader.onload = function () {
+                dataUrl = reader.result;
+                $("#showPic").html("<img src='" + dataUrl + "'>");
+                makeRequest(dataUrl, getAPIInfo);
+            }
+        }
+
+        //section 6
+        //APIへのリクエストに組み込むJsonの組み立て
+        function makeRequest(dataUrl, callback) {
+            var end = dataUrl.indexOf(",")
+            var request = "{'requests': [{'image': {'content': '" + dataUrl.slice(end + 1) + "'},'features': [{'type': 'LABEL_DETECTION','maxResults': 20,},{'type': 'FACE_DETECTION',},{'type':'TEXT_DETECTION','maxResults': 20,}]}]}"
+            callback(request)
+        }
+
+        //section 7
+        //通信を行う
+        function getAPIInfo(request) {
+            $.ajax({
+                url: api_url,
+                type: 'POST',
+                async: true,
+                cashe: false,
+                data: request,
+                dataType: 'json',
+                contentType: 'application/json',
+            }).done(function (result) {
+                showResult(result);
+            }).fail(function (result) {
+                alert('failed to load the info');
+            });
+        }
+
+        //section 8：得られた結果を画面に表示する
+        function showResult(result) {
+            //8-1 ラベル検出結果の表示
+            // console.log(result.responses[0].labelAnnotations);
+            // console.log(result.responses[0].labelAnnotations.description); // undefined
+            var EnglishArrayWords = [];// ラベルの英語表記を入れる配列
+            for (var i = 0; i < result.responses[0].labelAnnotations.length; i++) {
+                $("#resultBox-English tr:eq(" + i + ") td").text(result.responses[0].labelAnnotations[i].description)
+                EnglishArrayWords.push(result.responses[0].labelAnnotations[i].description);
+            }
+            // console.log(EnglishArrayWords);  // 入った
+
+            // forEachで書くと
+            // let html = '';
+            // let JapaneseArrayWords = []; // 日本語に翻訳したのを入れる配列
+            // var translatedWords = '';   // 日本語になったwords
+            // //日本語に翻訳されたものを投入
+            // EnglishArrayWords.forEach(function (EnglishArrayWord) {
+            //     // console.log(EnglishArrayWord);
+            //     translatedWords = translateEngToJap(EnglishArrayWord);
+            //     // console.log(translatedWords);
+            //     JapaneseArrayWords.push(translatedWords);
+            //     html += '<li>' + translatedWords + '</li>';
+            // });
+            // document.querySelector('ul').innerHTML = html;
+            // // 表示もOK,表示場所調整必要
+            // // console.log(translatedWords);
+            // // console.log(JapaneseArrayWords); // 日本語配列OK
+
+            // forで書き換え
+            let JapaneseArrayWords = []; // 日本語に翻訳したのを入れる配列
+            var translatedWords = '';   // 日本語になったwords（not配列）
+            translatedWords = translateEngToJap(EnglishArrayWords);
+            console.log(translatedWords);
+            var spllitWords = translatedWords.split('、');
+
+            for (var i = 0; i < spllitWords.length; i++) {
+
+                japanese = spllitWords[i];
+                console.log(japanese);// OK:配列の要素をひとつづつ
+                $("#resultBox-Japanese tr:eq(" + i + ") td").html('<a onclick="openbox(\'JP' + i + '\', \'' + japanese + '\')">??</a >')
+                //日本語を？で隠す
+
+
+                //console.log(spllitWords);
+                // JapaneseArrayWords.push(translatedWords); // 配列に投入
+                // console.log(JapaneseArrayWords);// NG:一行に翻訳全投入×20行になったw
+                // $("#resultBox-Japanese tr:eq(" + i + ") td").text(translatedWords)// NG:同上、一行に翻訳全投入×20行になったw
+            }
+
+
+            //8-2 表情分析の結果の表示
+            if (result.responses[0].faceAnnotations) {
+                //この変数に、表情のlikelihoodの値を配列として保持する
+                var facialExpression = [];
+                facialExpression.push(result.responses[0].faceAnnotations[0].joyLikelihood);
+                facialExpression.push(result.responses[0].faceAnnotations[0].sorrowLikelihood);
+                facialExpression.push(result.responses[0].faceAnnotations[0].angerLikelihood);
+                facialExpression.push(result.responses[0].faceAnnotations[0].surpriseLikelihood);
+                facialExpression.push(result.responses[0].faceAnnotations[0].headwearLikelihood);
+                for (var k = 0; k < facialExpression.length; k++) {
+                    if (facialExpression[k] == 'UNKNOWN') {
+                        facialExpression[k] = 0;
+                    } else if (facialExpression[k] == 'VERY_UNLIKELY') {
+                        facialExpression[k] = 2;
+                    } else if (facialExpression[k] == 'UNLIKELY') {
+                        facialExpression[k] = 4;
+                    } else if (facialExpression[k] == 'POSSIBLE') {
+                        facialExpression[k] = 6;
+                    } else if (facialExpression[k] == 'LIKELY') {
+                        facialExpression[k] = 8;
+                    } else if (facialExpression[k] == 'VERY_LIKELY') {
+                        facialExpression[k] = 10;
+                    }
+                }
+                //8-3 チャート描画の処理
+                $("#chartArea").highcharts({
+                    chart: {
+                        polar: true,
+                        type: 'line'
+                    },
+                    title: {
+                        text: 'この人はどんな気持ちかな？',
+                        // text: 'Expression of a person',
+                    },
+                    pane: {
+                        size: '80%'
+                    },
+                    xAxis: {
+                        categories: ['joy😊', 'sorrow😢', 'anger😡', 'surprise😲', 'headwear🧢'],
+                        tickmarkPlacement: 'on',
+                        lineWidth: 0
+                    },
+                    yAxis: {
+                        gridLineInterpolation: 'polygon',
+                        lineWidth: 0,
+                        max: 10,
+                        min: 0
+                    },
+                    tooltip: {
+                        shared: true,
+                        pointFormat: '<span style="color:{series.color}">{series.name}: <b>{point.y:,.0f}</b><br/>'
+                    },
+                    series: [{
+                        // name: '可能性',
+                        name: 'likelihood',
+                        data: facialExpression,
+                        pointPlacement: 'on'
+                    }]
+                })
+            } else {
+                //表情に関する結果が得られなかった場合、表示欄にはその旨を記す文字列を表示
+                $("#chartArea").append("<div><b>この写真に人は写っていないね</b></div>");
+            }
+            //8-4 テキスト解読の結果を表示
+            if (result.responses[0].textAnnotations) {
+                for (var j = 1; j < result.responses[0].textAnnotations.length; j++) {
+                    if (j < 16) {
+                        $("#textBox").append("<tr><td class='resultTableContent'>" + result.responses[0].textAnnotations[j].description + "</td></tr>")
+                    }
+                }
+            } else {
+                //テキストに関する結果が得られなかった場合、表示欄にはその旨を記す文字列を表示
+                $("#textBox").append("<tr><td class='resultTableContent'><b>文字はありません</b></td></tr>")
+            }
+        }
+
+        // 日本語訳をhide&show
+
+        function openbox(classname, jptxt) {
+            $("." + classname).text(jptxt);
+        }
+
+    </script>
+
+</body>
+
+</html>

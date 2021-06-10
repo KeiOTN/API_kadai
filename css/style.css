@@ -1,0 +1,156 @@
+body {
+            text-align: center;
+        }
+
+        /* ユーザのアップロードした画像に関する記述 */
+        img {
+            width: 100%;
+            max-height: 300px;
+            max-width: 480px;
+            height: auto;
+            width: auto;
+        }
+
+        .resultTableContent-English {
+            height: 30px;
+            border: 3px solid #003A76;
+            border-radius: 4px;
+            background-color: rgb(200, 214, 241);
+        }
+
+        .resultTableContent-Japanese {
+            height: 30px;
+            border: 3px solid #ca8506;
+            border-radius: 4px;
+            background-color: rgb(245, 240, 179);
+        }
+
+        .resultTableContent-Japanese:hover {
+            opacity: 0.9;
+        }
+
+        .resultTableContent-lid {
+            height: 30px;
+            border: 3px solid #ca8506;
+            border-radius: 4px;
+            background-color: #ca8506;
+            position: absolute;
+            right: 10px;
+            z-index: 100;
+        }
+
+
+
+        /* 文字解析結果表示欄 */
+        .resultTableContent {
+            text-decoration: underline;
+        }
+
+        #title {
+            height: 40px;
+            text-align: center;
+            background-color: #003A76;
+            font-weight: bold;
+            font-size: 18px;
+            color: white;
+            line-height: 40px;
+        }
+
+        .right-and-left {
+            display: flex;
+            flex-direction: row;
+        }
+
+        .resultArea {
+            width: 100%;
+            height: auto;
+            margin: 0px auto;
+            text-align: center;
+        }
+
+        #showPic {
+            border: 6px solid #003A76;
+            border-radius: 4px;
+            width: 85%;
+            height: 300px;
+            margin: 10px;
+
+        }
+
+        #resultTable {
+            width: 100%;
+            margin: 10px;
+        }
+
+        #chartArea {
+            border: 6px solid #003A76;
+            border-radius: 4px;
+            width: 85%;
+            height: 300px;
+            margin: 10px;
+        }
+
+        .text-result {
+            border: 6px solid #003A76;
+            border-radius: 4px;
+            width: 85%;
+            height: 300px;
+            margin: 10px;
+        }
+
+        #textBox {
+            /* border: 6px solid #003A76;
+            border-radius: 4px; */
+            width: 85%;
+            height: 50%;
+            /* height: 300px; */
+            padding: 10px;
+            display: flex;
+            text-align: left;
+            flex-direction: column;
+            flex-wrap: wrap;
+        }
+
+        #textTable {
+            width: 100%;
+            height: 80%;
+            margin: 10px;
+            /* text-align: center; */
+        }
+
+        /* 初期状態では結果部分が表示されないようにするための記述 */
+        .hidden {
+            display: none;
+        }
+
+        .photo-and-chart {
+            width: 50%;
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .label-result {
+            width: 50%;
+            display: flex;
+            flex-direction: row;
+            padding: 10px;
+        }
+
+        #resultTable-English {
+            width: 70%;
+        }
+
+        #resultTable-Japanese {
+            width: 30%;
+        }
+
+        .photo-area {
+            width: 100%;
+            height: 50%;
+        }
+
+        .emotion-area {
+            width: 100%;
+            height: 50%;
+        }
